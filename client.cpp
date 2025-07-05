@@ -4,6 +4,7 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
+#include <png++/png.hpp>
 #include <chrono>
 #include <thread>
 #include "cipher.h"
@@ -14,7 +15,7 @@ using namespace boost::asio;
 
 using ip::tcp;
 
-const string key = "Hk8#2FpL9qR$5tW!zX*cV6%bU7nY4@eSdGfJhMjK";
+string key;
 
 constexpr int WIDTH = 500;
 constexpr int HEIGHT = 800;
@@ -114,6 +115,20 @@ public:
         }
     }
 };
+
+string decrypt_message(tcp::socket& client) {
+    const size_t EXPECTED_SIZE = 56;
+    vector<char> buf(EXPECTED_SIZE);
+    boost::system::error_code error;
+
+    read(client, buffer(buf), transfer_exactly(EXPECTED_SIZE), error);
+
+    if (error || buf.size() < EXPECTED_SIZE) {
+        cerr << "Key read error: " << error.message() << "\n";
+        return "";
+    }
+    return string(buf.begin() + 16, buf.end());
+}
 
 class Session {
 public:
@@ -265,8 +280,8 @@ int main() {
     bool active_chats = false;
 
     string ack = "login";
-    string login = "angryduck001";
-    string password = "test124";
+    string login;
+    string password;
     string buf;
 
     SDL_Rect board_messages = { 30, 100, 440, 600 };
@@ -287,7 +302,7 @@ int main() {
 
     io_context io_ctx;
 
-    tcp::endpoint endpoint(ip::make_address("25.18.77.174"), 8088);
+    tcp::endpoint endpoint(ip::make_address("5.35.102.132"), 8088);
 
     tcp::socket socket(io_ctx);
 
@@ -348,7 +363,7 @@ int main() {
     games_obj.InititTexture(games_button, games_obj_d);
     chat_obj.InititTexture(chat_button, chat_obj_d);
 
-    play_music(menu_sound);
+    key = decrypt_message(*server);
 
     while (!quit) {
         try {
